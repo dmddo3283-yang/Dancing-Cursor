@@ -37,15 +37,21 @@ body {
 /* Header */
 .hero { display: flex; align-items: center; gap: 12px; }
 .brand-mark {
-  display: flex; align-items: center; justify-content: center; gap: 3px;
-  width: 42px; height: 42px; flex: 0 0 auto; border-radius: 13px;
-  background: linear-gradient(150deg, var(--cyan), var(--violet));
-  box-shadow: 0 8px 20px rgba(76, 201, 255, .35), inset 0 1px rgba(255, 255, 255, .35);
+  position: relative; overflow: hidden;
+  width: 42px; height: 42px; flex: 0 0 auto; border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .95), transparent 36%),
+    conic-gradient(from 0deg, var(--cyan), var(--violet), var(--pink), var(--aqua), var(--cyan));
+  box-shadow: 0 8px 20px rgba(138, 123, 255, .4), inset 0 1px rgba(255, 255, 255, .35);
+  animation: discospin 6s linear infinite;
 }
-.brand-mark i { width: 3px; border-radius: 3px; background: rgba(255, 255, 255, .95); animation: bars .8s ease-in-out infinite alternate; }
-.brand-mark i:nth-child(1), .brand-mark i:nth-child(5) { height: 10px; }
-.brand-mark i:nth-child(2), .brand-mark i:nth-child(4) { height: 20px; animation-delay: -.25s; }
-.brand-mark i:nth-child(3) { height: 26px; animation-delay: -.45s; }
+.brand-mark::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(10, 16, 40, .4) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(90deg, rgba(10, 16, 40, .4) 0 1px, transparent 1px 6px);
+  mix-blend-mode: multiply;
+}
 
 .brand-text { flex: 1; min-width: 0; }
 .eyebrow { margin: 0 0 2px; color: var(--aqua); font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
@@ -64,9 +70,9 @@ h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
 .power-zone { display: grid; justify-items: center; padding: 6px 0 2px; }
 .power-button {
   width: 138px; height: 138px; display: grid; place-items: center; align-content: center; gap: 2px;
-  color: #06121f; border: 0; border-radius: 50%; cursor: pointer;
-  background: radial-gradient(circle at 36% 28%, #9af3e6, var(--aqua) 46%, #17b6a2 100%);
-  box-shadow: 0 0 0 7px rgba(56, 225, 200, .1), 0 16px 34px rgba(56, 225, 200, .32), inset 0 2px 3px rgba(255, 255, 255, .55);
+  color: #0d0a24; border: 0; border-radius: 50%; cursor: pointer;
+  background: radial-gradient(circle at 36% 28%, #d8caff, var(--violet) 46%, #6b4cd6 100%);
+  box-shadow: 0 0 0 7px rgba(138, 123, 255, .12), 0 16px 34px rgba(138, 123, 255, .34), inset 0 2px 3px rgba(255, 255, 255, .5);
   transition: transform .18s cubic-bezier(.2, .8, .3, 1), box-shadow .18s, filter .18s;
 }
 .power-button:hover { transform: scale(1.04); filter: brightness(1.05); }
@@ -151,9 +157,9 @@ kbd {
 
 button:focus-visible, input:focus-visible, label:has(input:focus-visible) { outline: 2px solid var(--cyan); outline-offset: 3px; }
 
-@keyframes bars { to { height: 6px; } }
+@keyframes discospin { to { transform: rotate(360deg); } }
 @keyframes pulse { 50% { opacity: .4; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-mark i, .status-badge[data-state="running"] span { animation: none; }
+  .brand-mark, .status-badge[data-state="running"] span { animation: none; }
 }

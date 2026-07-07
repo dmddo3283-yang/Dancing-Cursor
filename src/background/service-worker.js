@@ -125,6 +125,8 @@ async function startCapture({ streamId, source = "tab", settings }) {
   state.status = "running";
   state.source = source;
   await refreshActiveTabs();
+  // 이미 열려 있던 탭에는 선언형 content script가 없을 수 있으므로 직접 주입한다.
+  await ensureContentInActiveTabs();
   broadcastState();
   return { ok: true };
 }
@@ -198,6 +200,22 @@ async function saveSettings(raw) {
   if (state.enabled) broadcastState(); // intensity·size는 즉시 반영
 }
 
+// ---- content script 주입 --------------------------------------------------
+
+async function injectContent(tabId) {
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId }, files: ["src/content/mirrorball.css"] });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["src/content/mirrorball.js"] });
+  } catch {
+    // chrome://, 웹 스토어 등 주입 불가 페이지 — 무시한다.
+  }
+}
+
+async function ensureContentInActiveTabs() {
+  const tabs = await chrome.tabs.query({ active: true }).catch(() => []);
+  await Promise.all(tabs.map((t) => (t.id != null ? injectContent(t.id) : null)));
+}
+
 // ---- 활성 탭 캐시 ---------------------------------------------------------
 
 async function refreshActiveTabs() {
@@ -209,7 +227,20 @@ async function refreshActiveTabs() {
   }
 }
 
-chrome.tabs.onActivated.addListener(refreshActiveTabs);
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  await refreshActiveTabs();
+  if (state.enabled && tabId != null) {
+    await injectContent(tabId);
+    chrome.tabs
+      .sendMessage(tabId, {
+        type: Message.MIRRORBALL_STATE,
+        active: true,
+        intensity: state.settings.intensity,
+        size: state.settings.size
+      })
+      .catch(() => {});
+  }
+});
 chrome.windows.onFocusChanged.addListener(refreshActiveTabs);
 chrome.tabs.onRemoved.addListener(refreshActiveTabs);
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {

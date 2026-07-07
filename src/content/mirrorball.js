@@ -2,6 +2,10 @@
 // 서비스 워커로부터 활성 상태와 오디오 프레임을 받아, 마우스를 따라다니는
 // 미러볼을 그리고 소리 크기에 맞춰 빛을 뿜게 한다.
 (() => {
+  // 선언형 content script와 서비스 워커의 프로그램적 주입이 겹칠 수 있으므로 중복 실행을 막는다.
+  if (window.__mirrorballCursorLoaded) return;
+  window.__mirrorballCursorLoaded = true;
+
   const Message = {
     GET_STATE: "GET_STATE",
     MIRRORBALL_STATE: "MIRRORBALL_STATE",
@@ -36,7 +40,10 @@
   // ---- 부팅: 현재 상태를 서비스 워커에 질의 ----
   chrome.runtime.sendMessage({ type: Message.GET_STATE }, (res) => {
     if (chrome.runtime.lastError || !res) return;
-    applyState(res.active, res.intensity, res.size);
+    const isActive = res.active ?? res.state?.enabled ?? false;
+    const nextIntensity = res.intensity ?? res.settings?.intensity;
+    const nextSize = res.size ?? res.settings?.size;
+    applyState(isActive, nextIntensity, nextSize);
   });
 
   chrome.runtime.onMessage.addListener((message) => {
