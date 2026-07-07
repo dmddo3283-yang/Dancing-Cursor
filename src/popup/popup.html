@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
@@ -7,41 +7,63 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header>
-      <div class="ball" aria-hidden="true"></div>
-      <div>
-        <h1>Mirrorball Cursor</h1>
-        <p id="status" class="status-off">꺼짐</p>
-      </div>
-    </header>
+    <main class="panel">
+      <header class="hero">
+        <div class="brand-mark" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="brand-text">
+          <p class="eyebrow">Sound-reactive cursor</p>
+          <h1>Mirrorball Cursor</h1>
+        </div>
+        <div id="statusBadge" class="status-badge" data-state="idle">
+          <span></span><b>OFF</b>
+        </div>
+      </header>
 
-    <button id="toggle" type="button" class="primary">소리 연결하기</button>
-    <p class="hint" id="hint">
-      버튼을 누르면 공유 창이 열립니다. <b>전체 화면</b> 또는 <b>탭</b>을 고르고
-      <b>오디오 공유</b>를 꼭 체크하세요.
-    </p>
+      <section class="power-zone">
+        <button id="powerButton" class="power-button" type="button">
+          <span class="power-icon" aria-hidden="true"></span>
+          <strong>START</strong>
+          <small>현재 탭 사운드</small>
+        </button>
+        <div class="meter" aria-label="현재 감지 음량">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p id="statusText" class="status-text">준비 완료 — 이 탭에서 음악을 틀어주세요.</p>
+      </section>
 
-    <section class="settings">
-      <label>
-        <span>민감도 <em id="sensitivityVal"></em></span>
-        <input id="sensitivity" type="range" min="0" max="100" step="1" />
-      </label>
-      <label>
-        <span>빛 강도 <em id="intensityVal"></em></span>
-        <input id="intensity" type="range" min="0" max="100" step="1" />
-      </label>
-      <label>
-        <span>미러볼 크기 <em id="sizeVal"></em></span>
-        <input id="size" type="range" min="0" max="100" step="1" />
-      </label>
-      <label class="row">
-        <input id="playThrough" type="checkbox" />
-        <span>캡처한 소리도 다시 들려주기</span>
-      </label>
-    </section>
+      <section class="controls" aria-label="미러볼 설정">
+        <div class="control-heading">
+          <h2>Light mixer</h2>
+          <span id="lightName">SHINE</span>
+        </div>
 
-    <footer>단축키 <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> 로도 켜고 끌 수 있어요.</footer>
+        <label class="slider-row">
+          <span><b>빛 강도</b><output id="intensityValue">65</output></span>
+          <input id="intensity" type="range" min="1" max="100" value="65" />
+          <small>은은하게</small><small>눈부시게</small>
+        </label>
 
+        <label class="slider-row">
+          <span><b>감도</b><output id="sensitivityValue">55</output></span>
+          <input id="sensitivity" type="range" min="1" max="100" value="55" />
+          <small>둔감</small><small>민감</small>
+        </label>
+
+        <label class="slider-row last">
+          <span><b>미러볼 크기</b><output id="sizeValue">60</output></span>
+          <input id="size" type="range" min="1" max="100" value="60" />
+          <small>작게</small><small>크게</small>
+        </label>
+      </section>
+
+      <footer>
+        <p><b>START</b>는 지금 이 탭의 소리에 바로 연결됩니다.</p>
+        <p class="shortcut">켜기·끄기 단축키 <kbd>Alt</kbd><kbd>Shift</kbd><kbd>M</kbd></p>
+      </footer>
+    </main>
     <script type="module" src="popup.js"></script>
   </body>
 </html>

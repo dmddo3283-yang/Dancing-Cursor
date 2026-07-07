@@ -2,18 +2,18 @@ import { Message } from "../shared/messages.js";
 import { DEFAULT_SETTINGS, normalizeSettings } from "../shared/settings.js";
 
 const OFFSCREEN_PATH = "src/offscreen/offscreen.html";
-const CAPTURE_PATH = "src/capture/capture.html";
 
-// 현재 캡처 세션 상태. 서비스 워커는 언제든 종료·재시작될 수 있으므로
-// "확실한" 상태는 offscreen 문서의 존재 여부로 판단하고, 아래 값은 캐시로만 쓴다.
+// 현재 세션 상태. 팝업이 450ms마다 GET_STATE로 폴링해 미터·버튼을 갱신한다.
 const state = {
-  active: false,
-  settings: { ...DEFAULT_SETTINGS },
-  lastFrame: null
+  enabled: false,
+  status: "idle", // idle | starting | running
+  level: 0, // 현재 음량 (0~1)
+  error: null,
+  source: null, // "tab"
+  settings: { ...DEFAULT_SETTINGS }
 };
 
-// 프레임을 보낼 대상(각 창의 활성 탭) 캐시. 34ms마다 tabs.query를 돌리면 무거우므로
-// 탭/창 이벤트로만 갱신한다.
+// 프레임을 보낼 대상(각 창의 활성 탭) 캐시.
 let activeTabIds = new Set();
 
 init();
@@ -29,7 +29,17 @@ async function init() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message?.type) {
     case Message.GET_STATE:
-      sendResponse({ active: state.active, settings: state.settings });
+      sendResponse({
+        ok: true,
+        state: {
+          enabled: state.enabled,
+          status: state.status,
+          level: state.level,
+          error: state.error,
+          source: state.source
+        },
+        settings: state.settings
+      });
       return false;
 
     case Message.SAVE_SETTINGS:
@@ -38,7 +48,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case Message.START_CAPTURE:
       startCapture(message).then(sendResponse).catch((error) => {
-        sendResponse({ ok: false, error: readable(error) });
+        state.status = "idle";
+        state.error = readable(error);
+        sendResponse({ ok: false, error: state.error });
       });
       return true;
 
@@ -48,19 +60,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case Message.AUDIO_FRAME:
       // 서비스 워커가 유휴 상태로 재시작되어도 프레임이 오면 활성으로 복구한다.
-      if (!state.active) {
-        state.active = true;
+      if (!state.enabled) {
+        state.enabled = true;
+        state.status = "running";
         broadcastState();
       }
       onAudioFrame(message.frame);
       return false;
 
     case Message.CAPTURE_STARTED:
-      state.active = true;
+      state.enabled = true;
+      state.status = "running";
+      state.error = null;
       broadcastState();
       return false;
 
     case Message.AUDIO_STOPPED:
+      state.error = message.reason && !/사용자/.test(message.reason) ? message.reason : null;
       finishStop();
       return false;
 
@@ -69,20 +85,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// 툴바 아이콘 대신 단축키(Alt+Shift+M)로 켜고 끄기
+// 단축키(Alt+Shift+M): 팝업 없이도 현재 탭 소리에 바로 연결/해제
 chrome.commands.onCommand.addListener((command) => {
   if (command !== "toggle-mirrorball") return;
-  if (state.active) {
+  if (state.enabled) {
     stopCapture("단축키로 중지했습니다.");
   } else {
-    openCaptureTab();
+    startTabCaptureFromActiveTab();
   }
 });
 
 // ---- 캡처 수명주기 --------------------------------------------------------
 
-async function startCapture({ streamId, source = "desktop", settings }) {
+// 팝업/단축키 공통: streamId를 offscreen에 넘겨 분석을 시작한다.
+async function startCapture({ streamId, source = "tab", settings }) {
   if (settings) state.settings = normalizeSettings(settings);
+  state.status = "starting";
+  state.error = null;
 
   await ensureOffscreen();
 
@@ -97,13 +116,30 @@ async function startCapture({ streamId, source = "desktop", settings }) {
 
   if (!response?.ok) {
     await closeOffscreen();
-    return { ok: false, error: response?.error || "오디오 연결을 시작하지 못했습니다." };
+    state.status = "idle";
+    state.error = response?.error || "소리 연결을 시작하지 못했습니다.";
+    return { ok: false, error: state.error };
   }
 
-  state.active = true;
+  state.enabled = true;
+  state.status = "running";
+  state.source = source;
   await refreshActiveTabs();
   broadcastState();
   return { ok: true };
+}
+
+// 단축키 경로: 서비스 워커가 직접 활성 탭의 streamId를 얻어 시작한다.
+async function startTabCaptureFromActiveTab() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new Error("활성 탭을 찾지 못했습니다.");
+    const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+    await startCapture({ streamId, source: "tab", settings: state.settings });
+  } catch (error) {
+    state.status = "idle";
+    state.error = readable(error);
+  }
 }
 
 async function stopCapture(reason) {
@@ -116,15 +152,19 @@ async function stopCapture(reason) {
 }
 
 function finishStop() {
-  state.active = false;
-  state.lastFrame = null;
+  state.enabled = false;
+  state.status = "idle";
+  state.level = 0;
+  state.source = null;
   broadcastState();
   closeOffscreen();
 }
 
-async function onAudioFrame(frame) {
+function onAudioFrame(frame) {
   if (!frame) return;
-  state.lastFrame = frame;
+  // 미터용 음량을 부드럽게 추적
+  state.level = state.level * 0.6 + (frame.energy || 0) * 0.4;
+
   const payload = {
     type: Message.MIRRORBALL_FRAME,
     frame,
@@ -141,7 +181,7 @@ async function onAudioFrame(frame) {
 function broadcastState() {
   const payload = {
     type: Message.MIRRORBALL_STATE,
-    active: state.active,
+    active: state.enabled,
     intensity: state.settings.intensity,
     size: state.settings.size
   };
@@ -155,7 +195,7 @@ function broadcastState() {
 async function saveSettings(raw) {
   state.settings = normalizeSettings(raw);
   await chrome.storage.local.set({ settings: state.settings });
-  if (state.active) broadcastState(); // intensity·size는 즉시 반영
+  if (state.enabled) broadcastState(); // intensity·size는 즉시 반영
 }
 
 // ---- 활성 탭 캐시 ---------------------------------------------------------
@@ -175,7 +215,7 @@ chrome.tabs.onRemoved.addListener(refreshActiveTabs);
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete") refreshActiveTabs();
   // 새로 로드된 탭의 content script에 현재 상태를 알려 준다.
-  if (changeInfo.status === "complete" && state.active && tab?.id != null) {
+  if (changeInfo.status === "complete" && state.enabled && tab?.id != null) {
     chrome.tabs
       .sendMessage(tab.id, {
         type: Message.MIRRORBALL_STATE,
@@ -194,7 +234,7 @@ async function ensureOffscreen() {
   await chrome.offscreen.createDocument({
     url: OFFSCREEN_PATH,
     reasons: ["USER_MEDIA"],
-    justification: "탭·화면 오디오를 분석해 미러볼 커서를 소리에 반응시킵니다."
+    justification: "탭 오디오를 분석해 미러볼 커서를 소리에 반응시킵니다."
   });
 }
 
@@ -212,13 +252,6 @@ async function closeOffscreen() {
   if (await hasOffscreen()) {
     await chrome.offscreen.closeDocument().catch(() => {});
   }
-}
-
-// ---- 캡처 시작 탭 열기 -----------------------------------------------------
-
-async function openCaptureTab() {
-  const url = chrome.runtime.getURL(CAPTURE_PATH);
-  await chrome.tabs.create({ url });
 }
 
 function readable(error) {

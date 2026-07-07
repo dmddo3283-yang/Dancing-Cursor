@@ -48,7 +48,9 @@ async function startCapture({ streamId, source = "desktop", sensitivity = 55, pl
 
   const sourceNode = audioContext.createMediaStreamSource(mediaStream);
   const outputGain = audioContext.createGain();
-  outputGain.gain.value = playThrough ? 1 : 0;
+  // 탭 캡처는 탭의 오디오를 가로채므로, 다시 스피커로 흘려보내지 않으면 음악이 음소거된다.
+  // 따라서 탭 소스는 항상 재생 통과시킨다. (데스크톱 캡처는 시스템 오디오와 무관하므로 설정을 따른다.)
+  outputGain.gain.value = playThrough || source === "tab" ? 1 : 0;
 
   sourceNode.connect(analyser);
   analyser.connect(outputGain);
