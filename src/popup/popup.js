@@ -22,30 +22,14 @@ elements.powerButton.addEventListener("click", async () => {
   if (state.enabled) {
     setBusy("미러볼을 끄는 중…");
     await send({ type: Message.STOP });
-    await refresh();
-    return;
-  }
-  await startTabCapture();
-});
-
-// 버튼 한 번으로 현재 탭 소리에 바로 연결 (추가 탭·선택 창 없음)
-async function startTabCapture() {
-  setBusy("현재 탭의 사운드에 연결 중…");
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-    const response = await send({
-      type: Message.START_CAPTURE,
-      streamId,
-      source: "tab",
-      settings: readSettings()
-    });
+  } else {
+    setBusy("미러볼 켜는 중…");
+    await send({ type: Message.SAVE_SETTINGS, settings: readSettings() });
+    const response = await send({ type: Message.START });
     showResponse(response);
-  } catch (error) {
-    showError(error instanceof Error ? error.message : String(error));
   }
   await refresh();
-}
+});
 
 for (const input of document.querySelectorAll("input")) {
   input.addEventListener("input", () => {
@@ -67,23 +51,21 @@ async function refresh() {
 }
 
 function renderState() {
-  const running = state.enabled && ["starting", "running"].includes(state.status);
+  const running = state.enabled && state.status === "running";
   elements.powerButton.classList.toggle("running", running);
   elements.powerButton.querySelector("strong").textContent = running ? "STOP" : "START";
-  elements.powerButton.querySelector("small").textContent = "현재 탭 사운드";
+  elements.powerButton.querySelector("small").textContent = running ? "재생 소리 감지 중" : "재생 소리 감지";
   elements.statusBadge.dataset.state = running ? "running" : "idle";
-  elements.statusBadge.querySelector("b").textContent = running ? "LIVE" : "OFF";
+  elements.statusBadge.querySelector("b").textContent = running ? "ON" : "OFF";
 
   if (state.error) {
     showError(state.error);
-  } else if (state.status === "running") {
+  } else if (running) {
     elements.statusText.classList.remove("error");
-    elements.statusText.textContent = "소리 감지 중 — 커서가 미러볼로 빛나고 있어요.";
-  } else if (state.status === "starting") {
-    setBusy("오디오에 연결 중…");
+    elements.statusText.textContent = "켜짐 — 소리가 나면 커서가 미러볼로 빛나요.";
   } else {
     elements.statusText.classList.remove("error");
-    elements.statusText.textContent = "준비 완료 — 이 탭에서 음악을 틀어주세요.";
+    elements.statusText.textContent = "준비 완료 — 켠 뒤 음악을 틀어주세요.";
   }
 
   const activeBars = Math.round((state.level || 0) * elements.meter.length);
