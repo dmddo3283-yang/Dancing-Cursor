@@ -4,7 +4,7 @@
 [Dancing Chrome](https://github.com/dmddo3283-yang/Dancing-Chrome)과 **동일한 방식**(화면·탭 오디오 캡처 → Web Audio 분석 → 비트 감지)으로 소리를 감지하므로, 두 확장을 **함께 켜 두면** 노래에 맞춰 Chrome 창은 춤추고 커서는 미러볼로 반짝입니다.
 
 <p align="center">
-  <a href="https://github.com/dmddo3283-yang/mirrorball/archive/refs/heads/main.zip">
+  <a href="https://github.com/dmddo3283-yang/Dancing-Cursor/archive/refs/heads/main.zip">
     <img src="https://img.shields.io/badge/⬇_다운로드-Mirrorball_Cursor-6ea8ff?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Mirrorball Cursor 다운로드" />
   </a>
 </p>
