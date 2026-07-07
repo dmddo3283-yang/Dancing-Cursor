@@ -13,6 +13,8 @@
   };
 
   const SPARK_POOL_SIZE = 20;
+  const SOUND_ON = 0.06; // 이 이상의 음량이면 "소리 있음"으로 판정
+  const SOUND_HOLD_MS = 900; // 마지막 소리 이후 이 시간까지는 미러볼 유지 (조용한 구간 브릿지)
 
   let root = null;
   let ball = null;
@@ -36,6 +38,7 @@
   let spin = 0;
   let show = 0; // 0~1 페이드
   let target = { energy: 0, bass: 0 };
+  let lastLoudAt = 0; // 마지막으로 소리가 감지된 시각
 
   // ---- 부팅: 현재 상태를 서비스 워커에 질의 ----
   chrome.runtime.sendMessage({ type: Message.GET_STATE }, (res) => {
@@ -112,7 +115,7 @@
     }
 
     mount();
-    document.documentElement.classList.add("mirrorball-hide-cursor");
+    // 네이티브 커서 숨김은 render()에서 소리가 있을 때만 켠다.
   }
 
   // document_start 시점엔 body가 없을 수 있으므로 documentElement에 붙인다.
@@ -136,6 +139,7 @@
     root = ball = raysEl = null;
     sparks = [];
     energy = bass = pulse = spin = show = 0;
+    lastLoudAt = 0;
     target = { energy: 0, bass: 0 };
   }
 
@@ -197,11 +201,18 @@
     // 회전: 소리가 클수록 빠르게
     spin = (spin + 0.35 + energy * 3.2) % 360;
 
-    // 미러볼은 활성 동안 항상 표시(포인터가 창 안에 있을 때). 소리 세기는 빛으로만 표현.
-    // 네이티브 커서는 build()에서 이미 숨겨 두어, 활성 내내 미러볼만 보인다.
-    const wantShow = pointerInside ? 1 : 0;
+    // 소리가 감지될 때만 미러볼을 표시한다. 마지막 소리 이후 SOUND_HOLD_MS 동안은
+    // 유지해 곡 중간의 조용한 구간에서 깜빡이지 않게 한다.
+    if (energy > SOUND_ON) lastLoudAt = now;
+    const hasSound = lastLoudAt > 0 && now - lastLoudAt < SOUND_HOLD_MS;
+    const wantShow = pointerInside && hasSound ? 1 : 0;
     show += (wantShow - show) * 0.15;
     if (show < 0.01) show = 0;
+
+    // 네이티브 커서는 미러볼이 보이는 동안에만 숨긴다. (소리 없으면 평소 커서로 복귀)
+    const cls = document.documentElement.classList;
+    if (show > 0.35) cls.add("mirrorball-hide-cursor");
+    else cls.remove("mirrorball-hide-cursor");
 
     // CSS 변수 반영
     const s = root.style;
