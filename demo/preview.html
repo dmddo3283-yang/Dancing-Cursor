@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Mirrorball Cursor — 시각 데모</title>
+<!-- 실제 확장이 쓰는 CSS를 그대로 로드 -->
+<link rel="stylesheet" href="../src/content/mirrorball.css" />
+<style>
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 50% 40%, #1a1f3d, #06070f 75%);
+    color: #cfd6ff; font-family: system-ui, sans-serif;
+    display: grid; place-items: center;
+  }
+  .panel { text-align: center; }
+  .panel h1 { font-weight: 700; letter-spacing: 0.5px; }
+  .panel p { color: #8b93c4; font-size: 14px; }
+  /* 데모에서는 미러볼을 화면 중앙에 고정 */
+  #mirrorball-root { --show: 1; }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h1>🪩 Mirrorball Cursor</h1>
+    <p>가짜 오디오 프레임으로 비트에 반응하는 모습을 미리 봅니다.</p>
+  </div>
+
+  <div id="mirrorball-root">
+    <div class="mb-rays"></div>
+    <div class="mb-glow"></div>
+    <div class="mb-ball"></div>
+  </div>
+
+  <script>
+    // src/content/mirrorball.js 의 렌더 로직과 동일한 방식으로 CSS 변수를 구동한다.
+    const root = document.getElementById("mirrorball-root");
+    const ball = root.querySelector(".mb-ball");
+    // 스파클 풀
+    const sparks = [];
+    for (let i = 0; i < 20; i++) {
+      const s = document.createElement("div");
+      s.className = "mb-spark";
+      root.appendChild(s);
+      sparks.push(s);
+    }
+    let sparkCursor = 0;
+
+    root.style.setProperty("--size", "70px");
+    let x = innerWidth / 2, y = innerHeight / 2;
+    let energy = 0, bass = 0, pulse = 0, spin = 0;
+    let target = { energy: 0, bass: 0 };
+
+    addEventListener("mousemove", (e) => { x = e.clientX; y = e.clientY; });
+
+    // 가짜 비트: 500ms마다 강한 비트
+    setInterval(() => {
+      target.energy = 0.7 + Math.random() * 0.3;
+      target.bass = 0.6 + Math.random() * 0.4;
+      pulse = Math.min(1, pulse + 1);
+      burst(target.bass);
+    }, 500);
+
+    function burst(bassLevel) {
+      const count = 4 + Math.round(bassLevel * 6);
+      for (let i = 0; i < count; i++) {
+        const s = sparks[sparkCursor % sparks.length];
+        sparkCursor++;
+        const angle = (sparkCursor * 137.5 + i * 40) * (Math.PI / 180);
+        const dist = 70 * (0.9 + (i % 3) * 0.5);
+        s.style.setProperty("--sx", `${Math.cos(angle) * dist}px`);
+        s.style.setProperty("--sy", `${Math.sin(angle) * dist}px`);
+        s.classList.remove("mb-burst");
+        void s.offsetWidth;
+        s.classList.add("mb-burst");
+      }
+    }
+
+    function frame() {
+      energy += (target.energy - energy) * 0.22;
+      bass += (target.bass - bass) * 0.28;
+      pulse *= 0.86; if (pulse < 0.001) pulse = 0;
+      target.energy *= 0.94; target.bass *= 0.94;
+      spin = (spin + 0.35 + energy * 3.2) % 360;
+
+      const s = root.style;
+      s.setProperty("--x", `${x}px`);
+      s.setProperty("--y", `${y}px`);
+      s.setProperty("--energy", energy.toFixed(3));
+      s.setProperty("--bass", bass.toFixed(3));
+      s.setProperty("--pulse", pulse.toFixed(3));
+      s.setProperty("--spin", `${spin.toFixed(1)}deg`);
+      ball.style.transform = `scale(${(1 + bass*0.16 + pulse*0.22).toFixed(3)}) rotate(${spin.toFixed(1)}deg)`;
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

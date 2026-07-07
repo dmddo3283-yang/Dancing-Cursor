@@ -1,0 +1,162 @@
+/* 미러볼 커서 오버레이. 모든 값은 content script가 CSS 변수로 주입한다. */
+#mirrorball-root {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  z-index: 2147483647;
+  --size: 42px;
+  --energy: 0; /* 0~1 부드럽게 보정된 음량 */
+  --bass: 0;
+  --pulse: 0; /* 비트 순간 1 → 감쇠 */
+  --spin: 0deg;
+  --show: 0; /* 0=숨김, 1=표시 (페이드) */
+  transform: translate3d(var(--x, -100px), var(--y, -100px), 0);
+  opacity: var(--show);
+  transition: opacity 0.35s ease;
+  contain: layout style size;
+}
+
+/* 뒤에서 뿜어져 나오는 회전 광선 */
+#mirrorball-root .mb-rays {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--size) * 9);
+  height: calc(var(--size) * 9);
+  margin-left: calc(var(--size) * -4.5);
+  margin-top: calc(var(--size) * -4.5);
+  border-radius: 50%;
+  /* 두껍고 긴 광선 8줄(흰색) + 사이사이 컬러 광선 8줄 */
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255, 255, 255, 0.6) 0deg 7deg,
+      transparent 7deg 45deg
+    ),
+    repeating-conic-gradient(
+      from 22.5deg,
+      rgba(174, 210, 255, 0.5) 0deg 6deg,
+      rgba(255, 200, 240, 0.5) 6deg 6.5deg,
+      transparent 6.5deg 45deg
+    );
+  -webkit-mask-image: radial-gradient(circle, #000 8%, rgba(0, 0, 0, 0.85) 45%, transparent 78%);
+  mask-image: radial-gradient(circle, #000 8%, rgba(0, 0, 0, 0.85) 45%, transparent 78%);
+  filter: blur(1.5px);
+  transform: rotate(calc(var(--spin) * -0.5));
+  opacity: calc((0.25 + var(--energy) * 0.85 + var(--pulse) * 0.5) * var(--show));
+  mix-blend-mode: screen;
+}
+
+/* 부드러운 발광(bloom) */
+#mirrorball-root .mb-glow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--size) * (2.2 + var(--energy) * 2.4 + var(--pulse) * 1.5));
+  height: calc(var(--size) * (2.2 + var(--energy) * 2.4 + var(--pulse) * 1.5));
+  margin-left: calc(var(--size) * (-1.1 - var(--energy) * 1.2 - var(--pulse) * 0.75));
+  margin-top: calc(var(--size) * (-1.1 - var(--energy) * 1.2 - var(--pulse) * 0.75));
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(210, 230, 255, 0.85) 0%,
+    rgba(150, 190, 255, 0.35) 35%,
+    transparent 70%
+  );
+  opacity: calc((0.25 + var(--energy) * 0.75 + var(--pulse) * 0.6) * var(--show));
+  mix-blend-mode: screen;
+}
+
+/* 미러볼 본체 */
+#mirrorball-root .mb-ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--size);
+  height: var(--size);
+  margin-left: calc(var(--size) / -2);
+  margin-top: calc(var(--size) / -2);
+  border-radius: 50%;
+  overflow: hidden;
+  transform: scale(calc(1 + var(--bass) * 0.16 + var(--pulse) * 0.22));
+  box-shadow:
+    0 0 calc(6px + var(--energy) * 22px) rgba(160, 200, 255, calc(0.5 + var(--energy) * 0.5)),
+    inset 0 0 6px rgba(0, 0, 0, 0.55);
+  background:
+    /* 좌상단 스페큘러 하이라이트 */
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95), transparent 34%),
+    /* 구체 명암 */
+    radial-gradient(circle at 40% 38%, #cfe2ff 0%, #6f8fd8 42%, #24325f 78%, #131a35 100%);
+}
+
+/* 격자 타일(거울 조각) */
+#mirrorball-root .mb-ball::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(10, 16, 40, 0.55) 0 1px, transparent 1px calc(var(--size) / 7)),
+    repeating-linear-gradient(90deg, rgba(10, 16, 40, 0.55) 0 1px, transparent 1px calc(var(--size) / 7));
+  mix-blend-mode: multiply;
+  opacity: 0.8;
+}
+
+/* 이동하는 무지개 반사광 */
+#mirrorball-root .mb-ball::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from calc(var(--spin) * 2),
+    rgba(255, 90, 170, 0.55), rgba(90, 200, 255, 0.55),
+    rgba(150, 255, 180, 0.55), rgba(255, 220, 120, 0.55),
+    rgba(255, 90, 170, 0.55)
+  );
+  mix-blend-mode: color-dodge;
+  opacity: calc(0.25 + var(--energy) * 0.6 + var(--pulse) * 0.4);
+}
+
+/* 비트마다 튀어나가는 반짝임 조각 풀 */
+#mirrorball-root .mb-spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(255, 255, 255, 0) 70%);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+#mirrorball-root .mb-spark.mb-burst {
+  animation: mb-spark-fly 620ms ease-out forwards;
+}
+
+@keyframes mb-spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--sx), var(--sy)) scale(0.2);
+  }
+}
+
+/* 네이티브 커서 숨김 (미러볼 활성 시) */
+html.mirrorball-hide-cursor,
+html.mirrorball-hide-cursor * {
+  cursor: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mirrorball-root .mb-spark.mb-burst { animation-duration: 1ms; }
+}

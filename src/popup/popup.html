@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mirrorball Cursor</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div class="ball" aria-hidden="true"></div>
+      <div>
+        <h1>Mirrorball Cursor</h1>
+        <p id="status" class="status-off">꺼짐</p>
+      </div>
+    </header>
+
+    <button id="toggle" type="button" class="primary">소리 연결하기</button>
+    <p class="hint" id="hint">
+      버튼을 누르면 공유 창이 열립니다. <b>전체 화면</b> 또는 <b>탭</b>을 고르고
+      <b>오디오 공유</b>를 꼭 체크하세요.
+    </p>
+
+    <section class="settings">
+      <label>
+        <span>민감도 <em id="sensitivityVal"></em></span>
+        <input id="sensitivity" type="range" min="0" max="100" step="1" />
+      </label>
+      <label>
+        <span>빛 강도 <em id="intensityVal"></em></span>
+        <input id="intensity" type="range" min="0" max="100" step="1" />
+      </label>
+      <label>
+        <span>미러볼 크기 <em id="sizeVal"></em></span>
+        <input id="size" type="range" min="0" max="100" step="1" />
+      </label>
+      <label class="row">
+        <input id="playThrough" type="checkbox" />
+        <span>캡처한 소리도 다시 들려주기</span>
+      </label>
+    </section>
+
+    <footer>단축키 <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> 로도 켜고 끌 수 있어요.</footer>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

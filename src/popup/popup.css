@@ -1,0 +1,127 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 300px;
+  margin: 0;
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: radial-gradient(circle at 50% 0%, #1b2144, #0b0d1a 75%);
+  color: #eef1ff;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ball {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95), transparent 34%),
+    conic-gradient(from 0deg, #6ea8ff, #b98cff, #7ef0ff, #ff8cc8, #6ea8ff);
+  box-shadow: 0 0 24px rgba(150, 190, 255, 0.7);
+  animation: spin 6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+h1 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.status-off { color: #98a0c8; }
+.status-on { color: #8dffbc; }
+#status {
+  font-size: 12px;
+  margin: 3px 0 0;
+}
+
+button.primary {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0a0c18;
+  background: linear-gradient(135deg, #8ec5ff, #b98cff);
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+button.primary:hover { filter: brightness(1.08); }
+button.primary:active { transform: scale(0.98); }
+button.primary.stop {
+  background: linear-gradient(135deg, #ff9aa8, #ff7ec2);
+}
+
+.hint {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #b4bbe4;
+  margin: 10px 2px 4px;
+}
+
+.settings {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  gap: 12px;
+}
+
+.settings label {
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #d6dbff;
+}
+
+.settings label span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.settings label em {
+  font-style: normal;
+  color: #9fb4ff;
+}
+
+.settings label.row {
+  grid-auto-flow: column;
+  justify-content: start;
+  align-items: center;
+  gap: 8px;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: #9db8ff;
+}
+
+footer {
+  margin-top: 14px;
+  font-size: 11px;
+  color: #8992bc;
+  text-align: center;
+}
+
+kbd {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: inherit;
+  font-size: 10.5px;
+}
